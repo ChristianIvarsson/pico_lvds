@@ -7,7 +7,13 @@
 .global drawLineASM     /* drawLineASM    ( *src, *dst, srcCount ) */
 .global drawLineASM2x   /* drawLineASM2x  ( *src, *dst, srcCount ) */
 
-.section RAM_SECTION_NAME(\name), "ax"
+.macro func_t   name
+.align 2
+.section .time_critical.\name, "ax"
+.type \name,%function
+.thumb_func
+\name:
+.endm
 
 # # # 1024 + H-blank at 48 Hz panel refresh
 # 7168 cycles / visible line  (7.0  cycles / pixel)   (28.0000 ticks for 4)  (28.444.. microsec)
@@ -22,9 +28,8 @@
     stmia   \dstReg! , { \scrtch2, \scrtch3 }    /* (1 + 2) Store data                                */
 .endm
 
-.align 2
-.thumb_func
-drawLineASM:
+
+func_t drawLineASM
 
     push    { r4 - r6 } /* (1 + 3) */
 
@@ -50,6 +55,7 @@ bx lr                   /* (3)                       */
 
 
 
+
 # 13 ticks / 2 panel pixels
 .macro drawDoublePixel    srcOffset    srcReg  dstReg  lutReg    scrtch1  scrtch2  scrtch3
     ldrb    \scrtch1 , [ \srcReg, #\srcOffset ]  /* (1 + 1) Load pixel                                */
@@ -60,8 +66,7 @@ bx lr                   /* (3)                       */
     stmia   \dstReg! , { \scrtch2, \scrtch3 }    /* (1 + 2) Store data                                */
 .endm
 
-.thumb_func
-drawLineASM2x:
+func_t  drawLineASM2x
 
     push    { r4 - r6 } /* (1 + 3) */
 
