@@ -19,6 +19,7 @@
 #include "../panel.h"
 
 #include "lut.h"
+#include "lvds.h"
 
 #define DMA_CHANNEL_MASK        (1u << LVDS_DMA_CHAN)
 #define DMA_CB_CHANNEL_MASK     (1u << LVDS_DMA_CB_CHAN)
@@ -33,11 +34,7 @@ uint8_t  screenBuf  [ yRES / 2 ] [ xRES / 2 ] __attribute__((aligned(4)));
 
 
 
-
-
-
 static volatile uint32_t isrCounter = 0; 
-static volatile uint32_t timeTaken  = 0; 
 
 static uintptr_t nextLinePtr = (uintptr_t)vBlankLine;
 
@@ -69,44 +66,48 @@ void genLineData(void)
     }
 }
 
+static lvdsData_t lvDat;
+
 // Fix this junk..
 static void __isr __not_in_flash_func(lvdsDMATrigger)(void)
 {
-    static uint32_t nextLineCnt = 0;
+    
+
     dma_hw->ints0 = DMA_CHANNEL_MASK;
 
     uint64_t ticks = time_us_64();
 
-    if (nextLineCnt < yRES)
+    if (lvDat.line < yRES)
     {
-        uint32_t idx = (nextLineCnt & (VISLINEBUFFERS - 1));
+        uint32_t idx = (lvDat.line & (VISLINEBUFFERS - 1));
         nextLinePtr = (uintptr_t)visLine[idx];
-        drawLineASM2x(screenBuf[nextLineCnt/2], visLine[idx], (xRES/2));
+        drawLineASM2x(screenBuf[lvDat.line/2], visLine[idx], (xRES/2));
 
         // Wasting less time but is rendering to an active buffer!
         // nextLinePtr = (uintptr_t)visLine[0];
         // if ((nextLineCnt & 1) == 0)
         //     drawLineASM2x(screenBuf[nextLineCnt/2], visLine[0], (xRES/2));
-
-        sio_hw->fifo_wr = nextLineCnt++;
+        lvDat.line++;
+        sio_hw->fifo_wr = (uint32_t)&lvDat;
         __sev();
     }
     else
     {
         nextLinePtr = (uintptr_t)vBlankLine;
-        if (++nextLineCnt >= (yRES + vBLANK))
+        if (++lvDat.line >= (yRES + vBLANK))
         {
             nextLinePtr = (uintptr_t)visLine[0];
             drawLineASM2x(screenBuf[0], visLine[0], (xRES/2));
-            sio_hw->fifo_wr = nextLineCnt = 1;
+            lvDat.line = 1;
+            sio_hw->fifo_wr = (uint32_t)&lvDat;
             __sev();
         }
     }
 
     isrCounter++;
 
-    if ((ticks = time_us_64() - ticks) > timeTaken)
-        timeTaken = (uint32_t)ticks;
+    if ((ticks = time_us_64() - ticks) > lvDat.rtime)
+        lvDat.rtime = (uint32_t)ticks;
 }
 
 static void dma_init(void)
@@ -193,9 +194,10 @@ void lvds_loop(void)
     while (1)
     {
         sleep_ms(500);
+        uint32_t timeTaken = (volatile uint32_t)lvDat.rtime;
         printf("t: %02u (m: %02u), c: %10u\n\r", timeTaken, tMax, isrCounter);
         if (timeTaken > tMax) tMax = timeTaken;
-        timeTaken = 0;
+        lvDat.rtime = 0;
         if (++uCnt >= 20)
         {
             uCnt = 0;
