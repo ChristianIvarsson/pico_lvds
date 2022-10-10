@@ -1,2 +1,4 @@
 # pico_lvds
- toy project
+
+I found an old laptop lvds panel and a stupid idea came to fruition.
+Not ready for general usage
