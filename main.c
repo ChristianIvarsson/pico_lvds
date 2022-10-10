@@ -56,17 +56,15 @@ volatile static uint32_t rTimeMin  = 0xffffffff;
 volatile static uint32_t rTimeMax  = 0;
 volatile static uint32_t rTimeAvg  = 0;
 
-static void core0_sio_irq(void)
+static void __isr __not_in_flash_func(core0_sio_irq)(void)
 {
     static uint32_t avgCnt = 0;
     static uint32_t avgT = 0;
 
-    lvdsData_t *tDat;
+    // multicore_fifo_clear_irq();
+    sio_hw->fifo_st = 0xff;
 
-    multicore_fifo_clear_irq();
-
-    while (multicore_fifo_rvalid())
-        tDat = (lvdsData_t*)multicore_fifo_pop_blocking();
+    lvdsData_t *tDat = (lvdsData_t*)multicore_fifo_pop_blocking();
 
     lastRtime = tDat->rtime;
     if (lastRtime > rTimeMax) rTimeMax = lastRtime;
@@ -81,9 +79,9 @@ static void core0_sio_irq(void)
     }
 }
 
-#define TEXT_CLR  (0xf8)
+#define TEXT_CLR   (0xf8)
 #define GRAPH_CLR  (0xf8)
-#define GRAPH_H (66)
+#define GRAPH_H    (66)
 
 // Ideally you'd want to just reverse the stupid buffer but it came at a significant performance loss (bus contention??)
 // Haven't checked closely but it REALLY didn't like reversal when I tried
@@ -124,7 +122,6 @@ void printGraph(uint32_t yOffs)
         screenBuf[((yRES/2) - (GRAPH_H + yOffs)) + (val)][((xRES/2)-1) - i] = 0;
     }
 
-
     for (uint32_t i = 0; i < ((xRES/2) - 1); i++)
         rtimes[i] = rtimes[i + 1];
     rtimes[(xRES/2) - 1] = (uint16_t)lastRtime;
@@ -135,7 +132,6 @@ void printGraph(uint32_t yOffs)
         rTimeMin = 0xffffffff;
         rTimeMax = 0;
     }
-
 
     // memset(&screenBuf[((yRES/2) - GRAPH_H) - yOffs][0], 0x00, (xRES/2) * GRAPH_H);
     for (uint32_t i = 0; i < (xRES/2); i++) {

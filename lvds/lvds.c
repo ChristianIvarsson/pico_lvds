@@ -28,6 +28,7 @@
 #define PIOFREQ    (CPUFREQ / PIODIV)
 #define FILL_COLR  (0xf8) // Only the pinkest pink will do
 
+// 9.6k
 uint32_t visLine    [ VISLINEBUFFERS ] [ hWORDS ];
 uint32_t vBlankLine [ hWORDS ];
 uint8_t  screenBuf  [ yRES / 2 ] [ xRES / 2 ] __attribute__((aligned(4)));
@@ -64,6 +65,25 @@ void genLineData(void)
 
 static lvdsData_t lvDat;
 
+// Timing critical so make the whole chain ram-only code
+static uint64_t __not_in_flash_func(time_us_64_ram)(void) {
+    // Need to make sure that the upper 32 bits of the timer
+    // don't change, so read that first
+    uint32_t hi = timer_hw->timerawh;
+    uint32_t lo;
+    do {
+        // Read the lower 32 bits
+        lo = timer_hw->timerawl;
+        // Now read the upper 32 bits again and
+        // check that it hasn't incremented. If it has loop around
+        // and read the lower 32 bits again to get an accurate value
+        uint32_t next_hi = timer_hw->timerawh;
+        if (hi == next_hi) break;
+        hi = next_hi;
+    } while (true);
+    return ((uint64_t) hi << 32u) | lo;
+}
+
 // Fix this junk..
 static void __isr __not_in_flash_func(lvdsDMATrigger)(void)
 {
@@ -71,7 +91,7 @@ static void __isr __not_in_flash_func(lvdsDMATrigger)(void)
 
     if (lvDat.line < yRES)
     {
-        uint64_t ticks = time_us_64();
+        uint64_t ticks = time_us_64_ram();
         uint32_t idx = (lvDat.line & (VISLINEBUFFERS - 1));
         nextLinePtr = (uintptr_t)visLine[idx];
         drawLineASM2x(screenBuf[lvDat.line/2], visLine[idx], (xRES/2));
@@ -82,9 +102,9 @@ static void __isr __not_in_flash_func(lvdsDMATrigger)(void)
         //     drawLineASM2x(screenBuf[nextLineCnt/2], visLine[0], (xRES/2));
         lvDat.line++;
         sio_hw->fifo_wr = (uint32_t)&lvDat;
-        __sev();
+        __asm volatile ("sev");
         // Not interested in blanking so only measure drawing
-        lvDat.rtime = (uint32_t)(time_us_64() - ticks);
+        lvDat.rtime = (uint32_t)(time_us_64_ram() - ticks);
     }
     else
     {
@@ -94,13 +114,13 @@ static void __isr __not_in_flash_func(lvdsDMATrigger)(void)
         }
         else
         {
-            uint64_t ticks = time_us_64();
+            uint64_t ticks = time_us_64_ram();
             nextLinePtr = (uintptr_t)visLine[0];
             drawLineASM2x(screenBuf[0], visLine[0], (xRES/2));
             lvDat.line = 1;
             sio_hw->fifo_wr = (uint32_t)&lvDat;
-            __sev();
-            lvDat.rtime = (uint32_t)(time_us_64() - ticks);
+            __asm volatile ("sev");
+            lvDat.rtime = (uint32_t)(time_us_64_ram() - ticks);
         }
     }
 }
