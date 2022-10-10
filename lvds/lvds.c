@@ -106,8 +106,8 @@ static void __isr __not_in_flash_func(lvdsDMATrigger)(void)
 
     isrCounter++;
 
-    if ((ticks = time_us_64() - ticks) > lvDat.rtime)
-        lvDat.rtime = (uint32_t)ticks;
+    // if ((ticks = time_us_64() - ticks) > lvDat.rtime)
+    lvDat.rtime = (uint32_t)(time_us_64() - ticks);
 }
 
 static void dma_init(void)
@@ -193,6 +193,7 @@ void lvds_loop(void)
 
     while (1)
     {
+        /*
         sleep_ms(500);
         uint32_t timeTaken = (volatile uint32_t)lvDat.rtime;
         printf("t: %02u (m: %02u), c: %10u\n\r", timeTaken, tMax, isrCounter);
@@ -203,6 +204,7 @@ void lvds_loop(void)
             uCnt = 0;
             tMax = 0;
         }
+*/
         /*
         if (frameCounter == 0)
         {

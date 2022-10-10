@@ -51,8 +51,16 @@ static void backlight_init(const uint16_t level)
 volatile uint32_t graphStep = 0;
 static uint16_t rtimes[(xRES/2)];
 
+volatile static uint32_t lastRtime = 0;
+volatile static uint32_t rTimeMin  = 0xffffffff;
+volatile static uint32_t rTimeMax  = 0;
+volatile static uint32_t rTimeAvg  = 0;
+
 static void core0_sio_irq(void)
 {
+    static uint32_t avgCnt = 0;
+    static uint32_t avgT = 0;
+
     lvdsData_t *tDat;
 
     multicore_fifo_clear_irq();
@@ -60,12 +68,25 @@ static void core0_sio_irq(void)
     while (multicore_fifo_rvalid())
         tDat = (lvdsData_t*)multicore_fifo_pop_blocking();
 
+    lastRtime = tDat->rtime;
+    if (lastRtime > rTimeMax) rTimeMax = lastRtime;
+    if (lastRtime < rTimeMin) rTimeMin = lastRtime;
+
+    avgT += lastRtime;
+
+    if (++avgCnt >= 512)
+    {
+        rTimeAvg = (avgT >> 9);
+        avgCnt = 0;
+        avgT = 0;
+    }
+/*
     if (tDat->line == yRES)
     {
         for (uint32_t i = 0; i < ((xRES/2) - 1); i++)
             rtimes[i] = rtimes[i + 1];
         rtimes[(xRES/2) - 1] = (uint16_t)tDat->rtime;
-    }
+    }*/
 }
 
 #define TEXT_CLR  (0xf8)
@@ -99,11 +120,32 @@ void printLCD(const uint8_t *str, uint32_t x, uint32_t y, uint32_t transparent)
 
 void printGraph(uint32_t yOffs)
 {
+    static uint32_t cntr = 512;
     uint8_t stats[(xRES/16)];
-    sprintf(stats, "rTime: %u     ", rtimes[(xRES/2) - 1]);
+    sprintf(stats, "rTime: %2u  min: %2u  max: %2u  avg: %2u  stat rst: %4u     ", rtimes[(xRES/2) - 1]&0x3ff, rTimeMin&0x3ff, rTimeMax&0x3ff, rTimeAvg&0x3ff, cntr);
     printLCD(stats, 0, 0, 0);
 
-    memset(&screenBuf[((yRES/2) - GRAPH_H) - yOffs][0], 0x00, (xRES/2) * GRAPH_H);
+    // Remove old data
+    for (uint32_t i = 0; i < (xRES/2); i++) {
+        uint32_t val = rtimes[i];
+        if (val >= GRAPH_H) val = GRAPH_H - 1;
+        screenBuf[((yRES/2) - (GRAPH_H + yOffs)) + (val)][((xRES/2)-1) - i] = 0;
+    }
+
+
+    for (uint32_t i = 0; i < ((xRES/2) - 1); i++)
+        rtimes[i] = rtimes[i + 1];
+    rtimes[(xRES/2) - 1] = (uint16_t)lastRtime;
+
+    if (--cntr == 0)
+    {
+        cntr = 512;
+        rTimeMin = 0xffffffff;
+        rTimeMax = 0;
+    }
+
+
+    // memset(&screenBuf[((yRES/2) - GRAPH_H) - yOffs][0], 0x00, (xRES/2) * GRAPH_H);
     for (uint32_t i = 0; i < (xRES/2); i++) {
         uint32_t val = rtimes[i];
         if (val >= GRAPH_H) val = GRAPH_H - 1;
@@ -143,12 +185,19 @@ int main(void)
 
     // printLCD("Test", 0, 0, 0);
 
+    uint32_t Inter = 0;
+
     while (1)
     {
+        // if (++Inter >= 2)
+        {
         for (uint32_t i = 0; i < ((xRES * yRES) / 8); i++)
         {
             ((uint8_t*)(screenBuf))[i] = (uint8_t) rand();
         }
+            // Inter = 0;
+        }
+        // else
 
         printGraph(8);
     }
