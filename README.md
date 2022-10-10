@@ -1,2 +1,2 @@
-# lvds_tft
+# pico_lvds
  toy project
