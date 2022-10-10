@@ -32,10 +32,6 @@ uint32_t visLine    [ VISLINEBUFFERS ] [ hWORDS ];
 uint32_t vBlankLine [ hWORDS ];
 uint8_t  screenBuf  [ yRES / 2 ] [ xRES / 2 ] __attribute__((aligned(4)));
 
-
-
-static volatile uint32_t isrCounter = 0; 
-
 static uintptr_t nextLinePtr = (uintptr_t)vBlankLine;
 
 void genLineData(void)
@@ -71,14 +67,11 @@ static lvdsData_t lvDat;
 // Fix this junk..
 static void __isr __not_in_flash_func(lvdsDMATrigger)(void)
 {
-    
-
     dma_hw->ints0 = DMA_CHANNEL_MASK;
-
-    uint64_t ticks = time_us_64();
 
     if (lvDat.line < yRES)
     {
+        uint64_t ticks = time_us_64();
         uint32_t idx = (lvDat.line & (VISLINEBUFFERS - 1));
         nextLinePtr = (uintptr_t)visLine[idx];
         drawLineASM2x(screenBuf[lvDat.line/2], visLine[idx], (xRES/2));
@@ -90,24 +83,26 @@ static void __isr __not_in_flash_func(lvdsDMATrigger)(void)
         lvDat.line++;
         sio_hw->fifo_wr = (uint32_t)&lvDat;
         __sev();
+        // Not interested in blanking so only measure drawing
+        lvDat.rtime = (uint32_t)(time_us_64() - ticks);
     }
     else
     {
-        nextLinePtr = (uintptr_t)vBlankLine;
-        if (++lvDat.line >= (yRES + vBLANK))
+        if (++lvDat.line < (yRES + vBLANK))
         {
+            nextLinePtr = (uintptr_t)vBlankLine;
+        }
+        else
+        {
+            uint64_t ticks = time_us_64();
             nextLinePtr = (uintptr_t)visLine[0];
             drawLineASM2x(screenBuf[0], visLine[0], (xRES/2));
             lvDat.line = 1;
             sio_hw->fifo_wr = (uint32_t)&lvDat;
             __sev();
+            lvDat.rtime = (uint32_t)(time_us_64() - ticks);
         }
     }
-
-    isrCounter++;
-
-    // if ((ticks = time_us_64() - ticks) > lvDat.rtime)
-    lvDat.rtime = (uint32_t)(time_us_64() - ticks);
 }
 
 static void dma_init(void)
@@ -193,25 +188,5 @@ void lvds_loop(void)
 
     while (1)
     {
-        /*
-        sleep_ms(500);
-        uint32_t timeTaken = (volatile uint32_t)lvDat.rtime;
-        printf("t: %02u (m: %02u), c: %10u\n\r", timeTaken, tMax, isrCounter);
-        if (timeTaken > tMax) tMax = timeTaken;
-        lvDat.rtime = 0;
-        if (++uCnt >= 20)
-        {
-            uCnt = 0;
-            tMax = 0;
-        }
-*/
-        /*
-        if (frameCounter == 0)
-        {
-            volatile uint64_t tickCpy = execTicks;
-            if (tickCpy == 0) tickCpy = 1;
-            printf("%.3f fps (%.3f ms)\n\r", (double)(1000000.0 * nTESTFRAMES) / tickCpy, (double)(tickCpy / nTESTFRAMES) / 1000.0);
-            while (frameCounter == 0)   ;
-        }*/
     }
 }

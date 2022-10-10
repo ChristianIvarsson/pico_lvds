@@ -74,19 +74,11 @@ static void core0_sio_irq(void)
 
     avgT += lastRtime;
 
-    if (++avgCnt >= 512)
-    {
+    if (++avgCnt >= 512) {
         rTimeAvg = (avgT >> 9);
         avgCnt = 0;
         avgT = 0;
     }
-/*
-    if (tDat->line == yRES)
-    {
-        for (uint32_t i = 0; i < ((xRES/2) - 1); i++)
-            rtimes[i] = rtimes[i + 1];
-        rtimes[(xRES/2) - 1] = (uint16_t)tDat->rtime;
-    }*/
 }
 
 #define TEXT_CLR  (0xf8)
@@ -183,21 +175,12 @@ int main(void)
     // Enable backlight
     backlight_init(256 * 64);
 
-    // printLCD("Test", 0, 0, 0);
-
-    uint32_t Inter = 0;
-
     while (1)
     {
-        // if (++Inter >= 2)
-        {
         for (uint32_t i = 0; i < ((xRES * yRES) / 8); i++)
         {
             ((uint8_t*)(screenBuf))[i] = (uint8_t) rand();
         }
-            // Inter = 0;
-        }
-        // else
 
         printGraph(8);
     }
