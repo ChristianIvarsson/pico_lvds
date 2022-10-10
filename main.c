@@ -48,7 +48,6 @@ static void backlight_init(const uint16_t level)
     pwm_set_gpio_level(20, level);
 }
 
-volatile uint32_t graphStep = 0;
 static uint16_t rtimes[(xRES/2)];
 
 volatile static uint32_t lastRtime = 0;
@@ -173,7 +172,7 @@ int main(void)
 
     while (1)
     {
-        for (uint32_t i = 0; i < ((xRES * yRES) / 8); i++)
+        for (uint32_t i = 0; i < ((xRES * (yRES - ((GRAPH_H + 8) * 2))) / 4); i++)
         {
             ((uint8_t*)(screenBuf))[i] = (uint8_t) rand();
         }

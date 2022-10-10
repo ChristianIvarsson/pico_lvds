@@ -20,6 +20,7 @@
 
 #include "lut.h"
 #include "lvds.h"
+#include "../utils.h"
 
 #define DMA_CHANNEL_MASK        (1u << LVDS_DMA_CHAN)
 #define DMA_CB_CHANNEL_MASK     (1u << LVDS_DMA_CB_CHAN)
@@ -66,7 +67,7 @@ void genLineData(void)
 static lvdsData_t lvDat;
 
 // Timing critical so make the whole chain ram-only code
-static uint64_t __not_in_flash_func(time_us_64_ram)(void) {
+uint64_t __not_in_flash_func(time_us_64_ram)(void) {
     // Need to make sure that the upper 32 bits of the timer
     // don't change, so read that first
     uint32_t hi = timer_hw->timerawh;
@@ -190,8 +191,25 @@ static void pio_init(void)
     pio_sm_set_enabled(LVDS_PIO, LVDS_PIO_SM, true);
 }
 
-void lvds_loop(void)
+/*
+static void lvdsPrintMemLoc(void)
 {
+    printf("lvds func mem locations:\n\r");
+    for (uint32_t i = 0; i < (sizeof(locVerif) / sizeof(locVerif[0])); i++)
+        printf("%08x: %s\n\r", locVerif[i].address, locVerif[i].text);
+}
+
+static const locVerif_t locVerif[] = {
+    {(uintptr_t)&lvdsDMATrigger  , "dma trigger func"    },
+    {(uintptr_t)&time_us_64_ram  , "Timer capture func"  },
+    {(uintptr_t)&drawLineASM     , "Draw func, asm"      },
+    {(uintptr_t)&drawLineASM2x   , "Draw func 2x, asm"   },
+};
+*/
+
+void __not_in_flash_func(lvds_loop)(void)
+{
+    // lvdsPrintMemLoc();
     pio_init();
     dma_init();
 
