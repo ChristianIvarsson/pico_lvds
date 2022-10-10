@@ -7,5 +7,5 @@
 !/build/flash.bat
 !/build/flash.sh
 !/build/flash.cfg
-/build/size.sh
-/build/size.bat
+!/build/size.sh
+!/build/size.bat
