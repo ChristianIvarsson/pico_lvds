@@ -4,8 +4,6 @@
 /.vscode
 
 /build/*
-!/build/flash.bat
-!/build/flash.sh
-!/build/flash.cfg
-!/build/size.sh
-!/build/size.bat
+!/build/flash.*
+!/build/size.*
+!/build/ramload.*
