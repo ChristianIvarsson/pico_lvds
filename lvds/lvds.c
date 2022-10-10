@@ -14,11 +14,10 @@
 #include "hardware/clocks.h"
 #include "hardware/structs/systick.h"
 
+#include "../build/lvds.pio.h"
+#include "../config.h"
+#include "../panel.h"
 
-#include "build/lvds.pio.h"
-
-#include "config.h"
-#include "panel.h"
 #include "lut.h"
 
 #define DMA_CHANNEL_MASK        (1u << LVDS_DMA_CHAN)

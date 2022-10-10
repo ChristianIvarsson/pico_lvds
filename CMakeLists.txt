@@ -11,9 +11,9 @@ add_executable(${PROJECT_NAME})
 target_sources(
     ${PROJECT_NAME} PUBLIC
     main.c
-    lvds.c
-    lut.c
-    lut_low.S
+    lvds/lvds.c
+    lvds/lut.c
+    lvds/lut_low.S
 )
 
 target_link_libraries(
@@ -28,7 +28,7 @@ target_link_libraries(
     hardware_interp
 )
 
-pico_generate_pio_header(${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR}/lvds.pio)
+pico_generate_pio_header(${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR}/lvds/lvds.pio)
 
 # create map/bin/hex file etc.
 pico_add_extra_outputs(${PROJECT_NAME})

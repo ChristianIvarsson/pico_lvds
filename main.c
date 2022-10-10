@@ -18,10 +18,10 @@
 
 #include "hardware/interp.h"
 
+#include "lvds/lut.h"
 
 #include "config.h"
 #include "panel.h"
-#include "lut.h"
 
 extern void lvds_loop(void);
 extern void genLineData(void);

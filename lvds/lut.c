@@ -3,8 +3,8 @@
 
 #include "pico/stdlib.h"
 
-#include "config.h"
-#include "panel.h"
+#include "../config.h"
+#include "../panel.h"
 #include "lut.h"
 
 #define PIX_B0(r, g, b, de) (bitLUT[                    (de) << 2        | ( (b)       & 2) | ( (g)       & 1) ])

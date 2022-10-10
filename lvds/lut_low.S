@@ -1,4 +1,4 @@
-#include "panel.h"
+#include "../panel.h"
 
 .syntax unified
 .cpu cortex-m0plus
