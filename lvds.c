@@ -70,6 +70,7 @@ void genLineData(void)
     }
 }
 
+// Fix this junk..
 static void __isr __not_in_flash_func(lvdsDMATrigger)(void)
 {
     static uint32_t nextLineCnt = 0;
@@ -93,7 +94,6 @@ static void __isr __not_in_flash_func(lvdsDMATrigger)(void)
     }
     else
     {
-        // testLut();
         nextLinePtr = (uintptr_t)vBlankLine;
         if (++nextLineCnt >= (yRES + vBLANK))
         {
@@ -112,7 +112,6 @@ static void __isr __not_in_flash_func(lvdsDMATrigger)(void)
 
 static void dma_init(void)
 {
-
     dma_claim_mask(DMA_CHANNELS_MASK);
     dma_channel_config channel_config = dma_channel_get_default_config(LVDS_DMA_CHAN);
     channel_config_set_dreq(&channel_config, pio_get_dreq(LVDS_PIO, LVDS_PIO_SM, true));
@@ -174,7 +173,6 @@ static void pio_init(void)
     pio_sm_set_clkdiv_int_frac(LVDS_PIO, LVDS_PIO_SM, PIODIV, 0);
 
     pio_sm_set_enabled(LVDS_PIO, LVDS_PIO_SM, true);
-
 }
 
 void lvds_loop(void)
@@ -195,7 +193,6 @@ void lvds_loop(void)
 
     while (1)
     {
-
         sleep_ms(500);
         printf("t: %02u (m: %02u), c: %10u\n\r", timeTaken, tMax, isrCounter);
         if (timeTaken > tMax) tMax = timeTaken;

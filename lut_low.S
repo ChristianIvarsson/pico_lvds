@@ -9,7 +9,7 @@
 
 .section RAM_SECTION_NAME(\name), "ax"
 
-# # # 1024 + H blank at 48 Hz panel refresh
+# # # 1024 + H-blank at 48 Hz panel refresh
 # 7168 cycles / visible line  (7.0  cycles / pixel)   (28.0000 ticks for 4)  (28.444.. microsec)
 # 8400 cycles / total line    (8.2~ cycles / pixel)   (32.8125 ticks for 4)  (33.333.. microsec)
 

@@ -7,14 +7,13 @@
 #include "panel.h"
 #include "lut.h"
 
-
 #define PIX_B0(r, g, b, de) (bitLUT[                    (de) << 2        | ( (b)       & 2) | ( (g)       & 1) ])
 #define PIX_B1(r, g, b, vs) (bitLUT[ (((b) >> 4) & 8) | (vs) << 2        | (((b) << 1) & 2) | (((r) >> 5) & 1) ])
 #define PIX_B2(r, g, b, hs) (bitLUT[ (((b) >> 3) & 8) | (hs) << 2        | (((g) >> 4) & 2) | (((r) >> 4) & 1) ])
-#define PIX_B3(r, g, b, xx) (bitLUT[ (((g) >> 4) & 8) | (((b) >> 3) & 4) | (((g) >> 3) & 2) | (((r) >> 3) & 1) ])
-#define PIX_B4(r, g, b, xx) (bitLUT[ (((g) >> 3) & 8) | (((b) >> 2) & 4) | (((g) >> 2) & 2) | (((r) >> 2) & 1) ])
-#define PIX_B5(r, g, b, xx) (bitLUT[ (((r) >> 4) & 8) | (((b) >> 1) & 4) | (((g) >> 1) & 2) | (((r) >> 1) & 1) ])
-#define PIX_B6(r, g, b, xx) (bitLUT[ (((r) >> 3) & 8) | ( (b)       & 4) | ( (g)       & 2) | ( (r)       & 1) ])
+#define PIX_B3(r, g, b)     (bitLUT[ (((g) >> 4) & 8) | (((b) >> 3) & 4) | (((g) >> 3) & 2) | (((r) >> 3) & 1) ])
+#define PIX_B4(r, g, b)     (bitLUT[ (((g) >> 3) & 8) | (((b) >> 2) & 4) | (((g) >> 2) & 2) | (((r) >> 2) & 1) ])
+#define PIX_B5(r, g, b)     (bitLUT[ (((r) >> 4) & 8) | (((b) >> 1) & 4) | (((g) >> 1) & 2) | (((r) >> 1) & 1) ])
+#define PIX_B6(r, g, b)     (bitLUT[ (((r) >> 3) & 8) | ( (b)       & 4) | ( (g)       & 2) | ( (r)       & 1) ])
 
 uint8_t pixLUT[256 * LUTMULTI]   __attribute__((aligned(4)));
 
@@ -84,12 +83,12 @@ void genPalette_3x8(const uint8_t *p)
         pixLUT[(i * LUTMULTI) + 0] = PIX_B0(r, g, b, 1); // DE, Data Enable, should always be set for visible pixels
         pixLUT[(i * LUTMULTI) + 1] = PIX_B1(r, g, b, 0);
         pixLUT[(i * LUTMULTI) + 2] = PIX_B2(r, g, b, 0);
-        pixLUT[(i * LUTMULTI) + 3] = PIX_B3(r, g, b, 0);
-        pixLUT[(i * LUTMULTI) + 4] = PIX_B4(r, g, b, 0);
-        pixLUT[(i * LUTMULTI) + 5] = PIX_B5(r, g, b, 0);
+        pixLUT[(i * LUTMULTI) + 3] = PIX_B3(r, g, b);
+        pixLUT[(i * LUTMULTI) + 4] = PIX_B4(r, g, b);
+        pixLUT[(i * LUTMULTI) + 5] = PIX_B5(r, g, b);
 #warning "Investigate packing!"
         // Looks like it's offset 6...
-        pixLUT[(i * LUTMULTI) + 6] = PIX_B6(r, g, b, 0);
+        pixLUT[(i * LUTMULTI) + 6] = PIX_B6(r, g, b);
     }
 }
 
@@ -105,22 +104,22 @@ void genPalette_32(const uint32_t *p)
         pixLUT[(i * LUTMULTI) + 0] = PIX_B0(r, g, b, 1); // DE, Data Enable, should always be set for visible pixels
         pixLUT[(i * LUTMULTI) + 1] = PIX_B1(r, g, b, 0);
         pixLUT[(i * LUTMULTI) + 2] = PIX_B2(r, g, b, 0);
-        pixLUT[(i * LUTMULTI) + 3] = PIX_B3(r, g, b, 0);
-        pixLUT[(i * LUTMULTI) + 4] = PIX_B4(r, g, b, 0);
-        pixLUT[(i * LUTMULTI) + 5] = PIX_B5(r, g, b, 0);
-        pixLUT[(i * LUTMULTI) + 6] = PIX_B6(r, g, b, 0);
+        pixLUT[(i * LUTMULTI) + 3] = PIX_B3(r, g, b);
+        pixLUT[(i * LUTMULTI) + 4] = PIX_B4(r, g, b);
+        pixLUT[(i * LUTMULTI) + 5] = PIX_B5(r, g, b);
+        pixLUT[(i * LUTMULTI) + 6] = PIX_B6(r, g, b);
     }
 }
 
 // You only need to know one thing. It's too slow...
-void __not_in_flash_func(drawLine)(const uint8_t *src, uint32_t *dst)
+void __not_in_flash_func(drawLine)(const uint8_t *src, uint32_t *dst, uint32_t srcCount)
 {
     // 7168 cycles / visible line  (7.0  cycles / pixel)   (28.0000 ticks for 4)  (28.444.. microsec)
     // 8400 cycles / total line    (8.2~ cycles / pixel)   (32.8125 ticks for 4)  (33.333.. microsec)
 
     const uint32_t *lutPtr = (uint32_t*)pixLUT;
 
-    for (uint32_t i = 0; i < xRES; i++)
+    for (uint32_t i = 0; i < srcCount; i++)
     {
         dst[(i * 2) + 0] = lutPtr[(src[i] * 2) + 0];
         dst[(i * 2) + 1] = lutPtr[(src[i] * 2) + 1];

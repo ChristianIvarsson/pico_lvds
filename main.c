@@ -40,14 +40,13 @@ static void backlight_init(const uint16_t level)
     pwm_config_set_clkdiv_int(&config, 1);
     pwm_init(slice_num, &config, true);
 
-    // "level". What is this garbage? Give me frequency and duty cycle like sane people!
+    // "level". What is this garbage? Gief duty cycle and frequency :D
     pwm_set_gpio_level(20, level);
 }
 
-static void core0_sio_irq()
+static void core0_sio_irq(void)
 {
     uint32_t line;
-    // Just record the latest entry
     while (multicore_fifo_rvalid())
         line = multicore_fifo_pop_blocking();
 
