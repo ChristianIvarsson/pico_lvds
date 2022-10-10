@@ -1,0 +1,9 @@
+
+
+/junk
+/.vscode
+
+/build/*
+!/build/flash.bat
+!/build/flash.sh
+!/build/flash.cfg

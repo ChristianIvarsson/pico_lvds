@@ -1,0 +1,4 @@
+cd build and type: cmake .. -G "Unix Makefiles"
+
+This will generate the required makefile
+After that you can just type make in the build folder
