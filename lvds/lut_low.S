@@ -9,7 +9,8 @@
 
 .macro func_t   name
 .align 2
-.section .time_critical.\name, "ax"
+# .section .time_critical.\name, "ax"
+.section .scratch_x.\name, "ax"
 .type \name,%function
 .thumb_func
 \name:
@@ -29,7 +30,7 @@
 .endm
 
 
-func_t drawLineASM
+func_t  drawLineASM
 
     push    { r4 - r6 } /* (1 + 3) */
 
