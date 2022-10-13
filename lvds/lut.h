@@ -4,11 +4,8 @@
 extern "C" {
 #endif
 
-// Wasting 256 bytes to prevent having to calculate in multiples of 7. (almost double performance)
-#define LUTMULTI (8)
-
 // lut.c
-extern uint8_t pixLUT[256 * LUTMULTI];
+extern uint32_t pixLUT[256];
 extern const uint8_t defaultPalette[256 * 3];
 
 extern void genPalette_3x8(const uint8_t *p);

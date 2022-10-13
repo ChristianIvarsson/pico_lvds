@@ -7,36 +7,23 @@
 #include "../panel.h"
 #include "lut.h"
 
-#define PIX_B0(r, g, b, de) (bitLUT[                    (de) << 2        | ( (b)       & 2) | ( (g)       & 1) ])
-#define PIX_B1(r, g, b, vs) (bitLUT[ (((b) >> 4) & 8) | (vs) << 2        | (((b) << 1) & 2) | (((r) >> 5) & 1) ])
-#define PIX_B2(r, g, b, hs) (bitLUT[ (((b) >> 3) & 8) | (hs) << 2        | (((g) >> 4) & 2) | (((r) >> 4) & 1) ])
-#define PIX_B3(r, g, b)     (bitLUT[ (((g) >> 4) & 8) | (((b) >> 3) & 4) | (((g) >> 3) & 2) | (((r) >> 3) & 1) ])
-#define PIX_B4(r, g, b)     (bitLUT[ (((g) >> 3) & 8) | (((b) >> 2) & 4) | (((g) >> 2) & 2) | (((r) >> 2) & 1) ])
-#define PIX_B5(r, g, b)     (bitLUT[ (((r) >> 4) & 8) | (((b) >> 1) & 4) | (((g) >> 1) & 2) | (((r) >> 1) & 1) ])
-#define PIX_B6(r, g, b)     (bitLUT[ (((r) >> 3) & 8) | ( (b)       & 4) | ( (g)       & 2) | ( (r)       & 1) ])
+#define LVDS_PIX(r, g, b, de, vs, hs) \
+    (                   (de)       << 30 | ((b)&0x80) << 22 | (vs)       << 28 | ((b)&0x40) << 21 | (hs)       << 26 | ((g)&0x80) << 18 | ((b)&0x20) << 19 | \
+     ((g)&0x40) << 17 | ((b)&0x10) << 18 | ((r)&0x80) << 14 | ((b)&0x08) << 17 | ((r)&0x40) << 13 | ((b)&0x04) << 16                                       | \
+                                           ((g)&0x02) << 12 | ((r)&0x01) << 12 | ((g)&0x04) <<  9 | ((r)&0x02) <<  9 | ((g)&0x08) <<  6 | ((r)&0x04) <<  6 | \
+     ((g)&0x10) <<  3 | ((r)&0x08) <<  3 | ((g)&0x20)       | ((r)&0x10)       | ((b)&0x01) <<  3 |(((r)>>3) & 0x04) | ((b)&0x02)       | ((g)&0x01) )
+
+//   31     30     29     28     27     26     25     24
+// < -- > < de > < b7 > < vs > < b6 > < hs > < g7 > < b5 >
+//   23     22     21     20     19     18     17     16
+// < g6 > < b4 > < r7 > < b3 > < r6 > < b2 > < -- > < -- >
+//   15     14     13     12     11     10      9      8
+// < -- > < -- > < g1 > < r0 > < g2 > < r1 > < g3 > < r2 >
+//    7      6      5      4      3      2     1       0
+// < g4 > < r3 > < g5 > < r4 > < b0 > < r5 > < b1 > < g0 >
 
 // 2k
-uint8_t pixLUT[256 * LUTMULTI]   __attribute__((aligned(4)));
-
-// Convert from single-ended to differential bits
-static const uint32_t bitLUT[] = {
-    0b01010101, // 0b0000  (0)
-    0b01010110, // 0b0001  (1)
-    0b01011001, // 0b0010  (2)
-    0b01011010, // 0b0011  (3)
-    0b01100101, // 0b0100  (4)
-    0b01100110, // 0b0101  (5)
-    0b01101001, // 0b0110  (6)
-    0b01101010, // 0b0111  (7)
-    0b10010101, // 0b1000  (8)
-    0b10010110, // 0b1001  (9)
-    0b10011001, // 0b1010  (A)
-    0b10011010, // 0b1011  (B)
-    0b10100101, // 0b1100  (C)
-    0b10100110, // 0b1101  (D)
-    0b10101001, // 0b1110  (E)
-    0b10101010  // 0b1111  (F)
-};
+uint32_t pixLUT[256];
 
 // from dosbox project
 const uint8_t defaultPalette[256 * 3] = {
@@ -76,20 +63,8 @@ const uint8_t defaultPalette[256 * 3] = {
 
 void genPalette_3x8(const uint8_t *p)
 {
-    for (uint32_t i = 0; i < 256; i++)
-    {
-        uint8_t r = p[(i * 3) + 0];
-        uint8_t g = p[(i * 3) + 1];
-        uint8_t b = p[(i * 3) + 2];
-        pixLUT[(i * LUTMULTI) + 0] = PIX_B0(r, g, b, 1); // DE, Data Enable, should always be set for visible pixels
-        pixLUT[(i * LUTMULTI) + 1] = PIX_B1(r, g, b, 0);
-        pixLUT[(i * LUTMULTI) + 2] = PIX_B2(r, g, b, 0);
-        pixLUT[(i * LUTMULTI) + 3] = PIX_B3(r, g, b);
-        pixLUT[(i * LUTMULTI) + 4] = PIX_B4(r, g, b);
-        pixLUT[(i * LUTMULTI) + 5] = PIX_B5(r, g, b);
-#warning "Investigate packing!"
-        // Looks like it's offset 6...
-        pixLUT[(i * LUTMULTI) + 6] = PIX_B6(r, g, b);
+    for (uint32_t i = 0; i < 256; i++) {
+        pixLUT[i] = LVDS_PIX(p[(i * 3) + 0], p[(i * 3) + 1], p[(i * 3) + 2], 1, 0, 0);
     }
 }
 
@@ -102,13 +77,8 @@ void genPalette_32(const uint32_t *p)
         uint8_t r = (uint8_t)(val >> 16);
         uint8_t g = (uint8_t)(val >> 8);
         uint8_t b = (uint8_t)(val);
-        pixLUT[(i * LUTMULTI) + 0] = PIX_B0(r, g, b, 1); // DE, Data Enable, should always be set for visible pixels
-        pixLUT[(i * LUTMULTI) + 1] = PIX_B1(r, g, b, 0);
-        pixLUT[(i * LUTMULTI) + 2] = PIX_B2(r, g, b, 0);
-        pixLUT[(i * LUTMULTI) + 3] = PIX_B3(r, g, b);
-        pixLUT[(i * LUTMULTI) + 4] = PIX_B4(r, g, b);
-        pixLUT[(i * LUTMULTI) + 5] = PIX_B5(r, g, b);
-        pixLUT[(i * LUTMULTI) + 6] = PIX_B6(r, g, b);
+        pixLUT[i] = LVDS_PIX(r, g, b, 1, 0 ,0);
+
     }
 }
 

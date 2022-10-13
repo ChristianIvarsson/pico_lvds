@@ -1,17 +1,21 @@
-.program lvds
+; side-set is in bit order. ie bit 0 == lowest pin, bit 1, next one above that etc
+
+; Differential data pairs
+.program lvds_dat
 .origin 0
+.side_set 4
+.wrap_target
+    out pc, 2    side 0b0101 ; 0b00
+    out pc, 2    side 0b0110 ; 0b01
+    out pc, 2    side 0b1001 ; 0b10
+    out pc, 2    side 0b1010 ; 0b11
+.wrap
 
 ; Differential clock pair
+.program lvds_clk
 .side_set 2
 
 .wrap_target
-    ; side-set is in bit order. ie bit 0 == lowest pin, bit 1, next one above that etc
-    out pins, 8   side 0b10 ; hi   |
-    out pins, 8   side 0b10 ; hi  _|
-    out pins, 8   side 0b01 ; lo |
-    out pins, 8   side 0b01 ; lo |
-    out pins, 8   side 0b01 ; lo |_
-    out pins, 8   side 0b10 ; hi   |
-    out pins, 16  side 0b10 ; hi   |   Use one byte and trash the other. This way it's using 8 bytes for every pixel instead of 7.
-    ;                                  (This makes the buffer much easier to work with)
+    nop    side 0b10 [3] ; hi for two (four) ticks
+    nop    side 0b01 [2] ; lo for three ticks
 .wrap

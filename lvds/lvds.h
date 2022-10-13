@@ -16,8 +16,8 @@ typedef struct {
 extern void lvds_loop(void);
 extern void genLineData(void);
 
-extern uint32_t visLine    [ VISLINEBUFFERS ] [ hWORDS ];
-extern uint32_t vBlankLine [ hWORDS ];
+extern uint32_t visLine    [ VISLINEBUFFERS ] [ FULL_LINE ];
+extern uint32_t vBlankLine [ FULL_LINE ];
 extern uint8_t  screenBuf  [ yRES / 2 ] [ xRES / 2 ];
 
 #ifdef __cplusplus 

@@ -76,8 +76,7 @@ Each pixel transaction is 7 bytes, best you can easily do is 4 pixels spread ove
 #define hBLANK  ( 176) // 136 (176) 216
 #define vBLANK  (  25) //  12 ( 25)  38
 
-#define visHWORDS  ((xRES * 8) / 4)
-#define hWORDS     (((xRES + hBLANK) * 8) / 4)
+#define FULL_LINE (xRES + hBLANK)
 
 #ifdef __cplusplus 
 }
