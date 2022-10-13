@@ -15,10 +15,11 @@
 #define PIX_B5(r, g, b)     (bitLUT[ (((r) >> 4) & 8) | (((b) >> 1) & 4) | (((g) >> 1) & 2) | (((r) >> 1) & 1) ])
 #define PIX_B6(r, g, b)     (bitLUT[ (((r) >> 3) & 8) | ( (b)       & 4) | ( (g)       & 2) | ( (r)       & 1) ])
 
+// 2k
 uint8_t pixLUT[256 * LUTMULTI]   __attribute__((aligned(4)));
 
 // Convert from single-ended to differential bits
-static uint32_t bitLUT[] = {
+static const uint32_t bitLUT[] = {
     0b01010101, // 0b0000  (0)
     0b01010110, // 0b0001  (1)
     0b01011001, // 0b0010  (2)

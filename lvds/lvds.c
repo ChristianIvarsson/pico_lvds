@@ -29,9 +29,12 @@
 #define PIOFREQ    (CPUFREQ / PIODIV)
 #define FILL_COLR  (0xf8) // Only the pinkest pink will do
 
-// 9.6k
-uint32_t visLine    [ VISLINEBUFFERS ] [ hWORDS ];
-uint32_t vBlankLine [ hWORDS ];
+// One could skip the double-buffering thing as long as the rendering code is slower than DMA
+// Decide what to do..
+uint32_t visLine    [ VISLINEBUFFERS ] [ hWORDS ];  // 18.75k
+uint32_t vBlankLine [ hWORDS ];                     // 9.375k
+
+// 150k
 uint8_t  screenBuf  [ yRES / 2 ] [ xRES / 2 ] __attribute__((aligned(4)));
 
 static uintptr_t nextLinePtr = (uintptr_t)vBlankLine;
@@ -66,62 +69,43 @@ void genLineData(void)
 
 static lvdsData_t lvDat;
 
-// Timing critical so make the whole chain ram-only code
-uint64_t __not_in_flash_func(time_us_64_ram)(void) {
-    // Need to make sure that the upper 32 bits of the timer
-    // don't change, so read that first
-    uint32_t hi = timer_hw->timerawh;
-    uint32_t lo;
-    do {
-        // Read the lower 32 bits
-        lo = timer_hw->timerawl;
-        // Now read the upper 32 bits again and
-        // check that it hasn't incremented. If it has loop around
-        // and read the lower 32 bits again to get an accurate value
-        uint32_t next_hi = timer_hw->timerawh;
-        if (hi == next_hi) break;
-        hi = next_hi;
-    } while (true);
-    return ((uint64_t) hi << 32u) | lo;
-}
-
-// Fix this junk..
 static void __isr __not_in_flash_func(lvdsDMATrigger)(void)
 {
     dma_hw->ints0 = DMA_CHANNEL_MASK;
 
-    if (lvDat.line < yRES)
-    {
-        uint64_t ticks = time_us_64_ram();
-        uint32_t idx = (lvDat.line & (VISLINEBUFFERS - 1));
-        nextLinePtr = (uintptr_t)visLine[idx];
-        drawLineASM2x(screenBuf[lvDat.line/2], visLine[idx], (xRES/2));
+    // (line & 3)
+    // 0 -> 1 Render / tag buffer 0
+    // 1 -> 2 Do nothing
+    // 2 -> 3 Render / tag buffer 1
+    // 3 -> 0 Do nothing
 
-        // Wasting less time but is rendering to an active buffer!
-        // nextLinePtr = (uintptr_t)visLine[0];
-        // if ((nextLineCnt & 1) == 0)
-        //     drawLineASM2x(screenBuf[nextLineCnt/2], visLine[0], (xRES/2));
-        lvDat.line++;
-        sio_hw->fifo_wr = (uint32_t)&lvDat;
-        __asm volatile ("sev");
-        // Not interested in blanking so only measure drawing
-        lvDat.rtime = (uint32_t)(time_us_64_ram() - ticks);
-    }
-    else
-    {
-        if (++lvDat.line < (yRES + vBLANK))
-        {
-            nextLinePtr = (uintptr_t)vBlankLine;
+    if (lvDat.line < yRES) {
+        if ((lvDat.line & 1) == 0) {
+            uint32_t ticks = systick_hw->cvr;
+            uint32_t idx = ((lvDat.line >> 1) & (VISLINEBUFFERS - 1));
+            nextLinePtr = (uintptr_t)visLine[idx];
+            drawLineASM2x(screenBuf[lvDat.line/2], visLine[idx], (xRES/2));
+            lvDat.line++;
+            
+            sio_hw->fifo_wr = (uint32_t)&lvDat;
+            __asm volatile ("sev");
+            // Not interested in blanking so only measure drawing
+            lvDat.rtime = (ticks - systick_hw->cvr)&0xffffff;
+        } else {
+            lvDat.line++;
         }
-        else
-        {
-            uint64_t ticks = time_us_64_ram();
+    } else {
+        if (++lvDat.line < (yRES + vBLANK)) {
+            nextLinePtr = (uintptr_t)vBlankLine;
+        } else {
+            uint32_t ticks = systick_hw->cvr;
             nextLinePtr = (uintptr_t)visLine[0];
             drawLineASM2x(screenBuf[0], visLine[0], (xRES/2));
             lvDat.line = 1;
             sio_hw->fifo_wr = (uint32_t)&lvDat;
             __asm volatile ("sev");
-            lvDat.rtime = (uint32_t)(time_us_64_ram() - ticks);
+            lvDat.rtime = (ticks - systick_hw->cvr)&0xffffff;
+            
         }
     }
 }
@@ -191,40 +175,23 @@ static void pio_init(void)
     pio_sm_set_enabled(LVDS_PIO, LVDS_PIO_SM, true);
 }
 
-/*
-static void lvdsPrintMemLoc(void)
+void lvds_loop(void)
 {
-    printf("lvds func mem locations:\n\r");
-    for (uint32_t i = 0; i < (sizeof(locVerif) / sizeof(locVerif[0])); i++)
-        printf("%08x: %s\n\r", locVerif[i].address, locVerif[i].text);
-}
-
-static const locVerif_t locVerif[] = {
-    {(uintptr_t)&lvdsDMATrigger  , "dma trigger func"    },
-    {(uintptr_t)&time_us_64_ram  , "Timer capture func"  },
-    {(uintptr_t)&drawLineASM     , "Draw func, asm"      },
-    {(uintptr_t)&drawLineASM2x   , "Draw func 2x, asm"   },
-};
-*/
-
-void __not_in_flash_func(lvds_loop)(void)
-{
-    // lvdsPrintMemLoc();
     pio_init();
     dma_init();
+
+    // Set systick to processor clock
+    systick_hw->csr = 0x5;
 
     // Kickstart DMA
     dma_channel_hw_addr(LVDS_DMA_CB_CHAN)->al3_read_addr_trig = (uintptr_t)&nextLinePtr;
 
-    // Even tho the buffers use 8 bytes for a single pixel, it's still only serializing 7 of those so the delays are correct
-    double expFramerate = (PIOFREQ / 7.0) / ((xRES + hBLANK) * (yRES + vBLANK));
-    printf("Expected framerate %.3f (lvds clock frequency: %.3f MHz)\n\r", expFramerate, (double)PIOFREQ / 7000000.0);
-    printf("One line (including blank) should take %.3f microsec\n\r", (double)(xRES + hBLANK) / (PIOFREQ / 7000000.0));
-
-    uint32_t tMax = 0;
-    uint32_t uCnt = 0;
-
-    while (1)
-    {
-    }
+/*  // Even tho the buffers use 8 bytes for a single pixel, it's still only serializing 7 of those so the delays are correct
+    printf("Expected framerate %.3f (lvds clock frequency: %.3f MHz)\n\r",
+        (PIOFREQ / 7.0) / ((xRES + hBLANK) * (yRES + vBLANK))  ,
+        (double)PIOFREQ / 7000000.0);
+    printf("One line (including blank) should take %.3f microsec\n\r",
+        (double)(xRES + hBLANK) / (PIOFREQ / 7000000.0));
+*/
+    while (1) { }
 }

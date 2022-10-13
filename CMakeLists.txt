@@ -15,10 +15,10 @@ if(DEFINED RUNFROMSRAM)
 add_compile_definitions(PICO_NO_FLASH=1)
 endif()
 
-
 target_sources(
     ${PROJECT_NAME} PUBLIC
-    main.c
+    main.cpp
+    lowlev.S
     lvds/lvds.c
     lvds/lut.c
     lvds/lut_low.S
@@ -52,4 +52,4 @@ pico_set_binary_type(${PROJECT_NAME} no_flash)
 endif()
 
 # pico_enable_stdio_usb(${PROJECT_NAME} 0)
-pico_enable_stdio_uart(${PROJECT_NAME} 1)
+# pico_enable_stdio_uart(${PROJECT_NAME} 1)

@@ -1,5 +1,8 @@
 #ifndef __PANEL_H__
 #define __PANEL_H__
+#ifdef __cplusplus 
+extern "C" {
+#endif
 
 /*
  8 - ck-
@@ -76,4 +79,7 @@ Each pixel transaction is 7 bytes, best you can easily do is 4 pixels spread ove
 #define visHWORDS  ((xRES * 8) / 4)
 #define hWORDS     (((xRES + hBLANK) * 8) / 4)
 
+#ifdef __cplusplus 
+}
+#endif
 #endif

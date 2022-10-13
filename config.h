@@ -1,5 +1,8 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
+#ifdef __cplusplus 
+extern "C" {
+#endif
 
 #define CPUFREQ (252UL * 1000000UL)
 
@@ -27,5 +30,7 @@
 #define LVDS_DMA_CB_CHAN  (1)
 
 
-
+#ifdef __cplusplus 
+}
+#endif
 #endif
