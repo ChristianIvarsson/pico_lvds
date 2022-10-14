@@ -62,6 +62,17 @@ void genLineData(void)
     }
 }
 
+static int32_t rqLutchg = -1;
+static uint32_t *newLut;
+
+void reqLutChange(const uint32_t *lut, uint16_t line)
+{
+    if (lut) {
+        newLut = lut;
+        rqLutchg = (int32_t)line;
+    }
+}
+
 // High channel is the one responsible of interrupts
 static void __isr __not_in_flash_func(lvdsDMATrigger)(void)
 {
@@ -77,13 +88,12 @@ static void __isr __not_in_flash_func(lvdsDMATrigger)(void)
         if ((lvDat.line & 1) == 0) {
             uint32_t ticks = systick_hw->cvr;
             uint32_t idx = ((lvDat.line >> 1) & (VISLINEBUFFERS - 1));
+            if (rqLutchg == (lvDat.line >> 1)) currentLUT = newLut;
             nextLinePtr = (uintptr_t)visLine[idx];
             drawLineASM2x(screenBuf[lvDat.line/2], visLine[idx], (xRES/2));
             lvDat.line++;
-            
             sio_hw->fifo_wr = (uint32_t)&lvDat;
             __asm volatile ("sev");
-            // Not interested in blanking so only measure drawing
             lvDat.rtime = (ticks - systick_hw->cvr)&0xffffff;
         } else {
             lvDat.line++;
@@ -93,13 +103,13 @@ static void __isr __not_in_flash_func(lvdsDMATrigger)(void)
             nextLinePtr = (uintptr_t)vBlankLine;
         } else {
             uint32_t ticks = systick_hw->cvr;
+            if (rqLutchg == 0) currentLUT = newLut;
             nextLinePtr = (uintptr_t)visLine[0];
             drawLineASM2x(screenBuf[0], visLine[0], (xRES/2));
             lvDat.line = 1;
             sio_hw->fifo_wr = (uint32_t)&lvDat;
             __asm volatile ("sev");
             lvDat.rtime = (ticks - systick_hw->cvr)&0xffffff;
-            
         }
     }
 }
@@ -209,7 +219,6 @@ static void pio_init(void)
     pio_sm_init(LVDS_PIO, LVDS_HI_SM, prog_offs, &c);
     pio_sm_set_clkdiv_int_frac(LVDS_PIO, LVDS_HI_SM, PIODIV, 0);
 
-
     /////////////////////////////////////////////////////////////////////////////////////
     // Clock pair
     prog_offs = pio_add_program(LVDS_PIO, &lvds_clk_program);
@@ -227,12 +236,34 @@ static void pio_init(void)
     pio_sm_set_clkdiv_int_frac(LVDS_PIO, LVDS_CK_SM, PIODIV, 0);
 }
 
+static void dvi_configure_pad(uint gpio) {
+	// 2 mA drive, enable slew rate limiting (this seems fine even at 720p30, and
+	// the 3V3 LDO doesn't get warm like when turning all the GPIOs up to 11).
+	// Also disable digital receiver.
+	hw_write_masked(
+		&padsbank0_hw->io[gpio],
+		(0 << PADS_BANK0_GPIO0_DRIVE_LSB),
+		PADS_BANK0_GPIO0_DRIVE_BITS | PADS_BANK0_GPIO0_SLEWFAST_BITS | PADS_BANK0_GPIO0_IE_BITS
+	);
+	// gpio_set_outover(gpio, invert ? GPIO_OVERRIDE_INVERT : GPIO_OVERRIDE_NORMAL);
+}
+
 void lvds_loop(void)
 {
     // Set systick to processor clock
     systick_hw->csr = 0x5;
 
+
+
+
+
     pio_init();
+
+    for (uint32_t i = 0; i < 10; i++)
+    {
+        dvi_configure_pad(i+8);
+    }
+
     dma_init();
 
     // Kickstart DMA

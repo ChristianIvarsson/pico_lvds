@@ -36,7 +36,8 @@ func_t  drawLineASM
 # r1: Destination pointer
 # r2: Pixel count
 # r3: LUT
-    ldr     r3, =pixLUT /* (1 + 1) */
+    ldr     r3, =currentLUT /* (1 + 1) */
+    ldr     r3, [ r3 ]      /* (1 + 1) */ 
 
 morePixels:
 
@@ -73,7 +74,8 @@ func_t  drawLineASM2x
 # r1: Destination pointer
 # r2: Pixel count
 # r3: LUT
-    ldr     r3, =pixLUT /* (1 + 1) */
+    ldr     r3, =currentLUT /* (1 + 1) */
+    ldr     r3, [ r3 ]      /* (1 + 1) */ 
 
 morePixels2x:
 

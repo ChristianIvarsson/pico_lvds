@@ -15,6 +15,7 @@ typedef struct {
 
 extern void lvds_loop(void);
 extern void genLineData(void);
+extern void reqLutChange(const uint32_t *lut, uint16_t line);
 
 extern uint32_t visLine    [ VISLINEBUFFERS ] [ FULL_LINE ];
 extern uint32_t vBlankLine [ FULL_LINE ];

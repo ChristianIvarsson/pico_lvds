@@ -23,7 +23,7 @@
 #include "lvds/lvds.h"
 
 #define TEXT_CLR   (0xf8)
-#define GRAPH_CLR  (0xf8)
+#define GRAPH_CLR  (0x3 << 5)
 #define GRAPH_H    (52)
 
 // Updated after EVERY visible line has been sent off to the pio engine
@@ -65,8 +65,6 @@ static void __isr __not_in_flash_func(core0_sio_irq)(void)
     }
 }
 
-// Ideally you'd want to just reverse the stupid buffer but it came at a significant performance loss (bus contention??)
-// Haven't checked closely but it REALLY didn't like reversal when I tried
 void printLCD(const char *str, uint32_t x, uint32_t y, uint32_t transparent)
 {
     if (!transparent) {
@@ -92,12 +90,15 @@ void printLCD(const char *str, uint32_t x, uint32_t y, uint32_t transparent)
 
 void printGraph(void)
 {
-    static uint16_t rtimes[(xRES/2)];
+    static uint8_t rtimes[(xRES/2) + 1];
     static uint32_t cntr = 512;
     char stats[(xRES/16) + 32];
 
+    // Force capture here
+    volatile uint32_t rTime = lastRtime;
+
     sprintf(stats, "rTime: %.1f  min: %.1f  max: %.1f  avg: %.1f  stat rst: %3u     ",
-        (double)rtimes[(xRES/2) - 1] / 252.0,
+        (double)rTime   / 252.0,
         (double)rTimeMin / 252.0,
         (double)rTimeMax / 252.0,
         (double)rTimeAvg / 252.0,
@@ -105,16 +106,9 @@ void printGraph(void)
 
     printLCD(stats, 0, 0, 0);
 
-    // Remove old data
-    for (uint32_t i = 0; i < (xRES/2); i++) {
-        uint32_t val = rtimes[i] / 252;
-        if (val >= GRAPH_H) val = GRAPH_H - 1;
-        screenBuf[((yRES/2) - (GRAPH_H + 8)) + (val)][((xRES/2)-1) - i] = 0;
-    }
-
-    for (uint32_t i = 0; i < ((xRES/2) - 1); i++)
-        rtimes[i] = rtimes[i + 1];
-    rtimes[(xRES/2) - 1] = (uint16_t)lastRtime;
+    rTime /= 252;
+    if (rTime >= GRAPH_H) rTime = GRAPH_H - 1;
+    rtimes[(xRES/2)] = (uint8_t)rTime;
 
     if (--cntr == 0) {
         cntr = 512;
@@ -123,9 +117,9 @@ void printGraph(void)
     }
 
     for (uint32_t i = 0; i < (xRES/2); i++) {
-        uint32_t val = rtimes[i] / 252;
-        if (val >= GRAPH_H) val = GRAPH_H - 1;
-        screenBuf[((yRES/2) - (GRAPH_H + 8)) + (val)][((xRES/2)-1) - i] = GRAPH_CLR;
+        screenBuf[((yRES/2) - (GRAPH_H + 8)) + (rtimes[i])][((xRES/2)-1) - i] = 0;
+        screenBuf[((yRES/2) - (GRAPH_H + 8)) + (rtimes[i+1])][((xRES/2)-1) - i] = GRAPH_CLR;
+        rtimes[i] = rtimes[i+1];
     }
 }
 
@@ -142,7 +136,7 @@ int main(void)
     srand((unsigned) time(&ti));
 
     // Generate LUT's and line data
-    genPalette_3x8(defaultPalette);
+    genPalette_3x8(rgb332Palette, 0);
     genLineData();
 
     // Prevent mayhem after flashing
