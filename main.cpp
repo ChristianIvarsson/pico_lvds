@@ -18,6 +18,7 @@
 
 #include "config.h"
 #include "panel.h"
+#include "utils.h"
 
 #include "lvds/lut.h"
 #include "lvds/lvds.h"
@@ -148,6 +149,8 @@ int main(void)
 
     // Enable backlight
     backlight_init(256 * 64);
+
+    pio_init_counter();
 
     while (1)
     {

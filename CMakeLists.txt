@@ -18,6 +18,7 @@ endif()
 target_sources(
     ${PROJECT_NAME} PUBLIC
     main.cpp
+    misc.c
     lowlev.S
     lvds/lvds.c
     lvds/lut.c
@@ -37,7 +38,7 @@ target_link_libraries(
 )
 
 pico_generate_pio_header(${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR}/lvds/lvds.pio)
-
+pico_generate_pio_header(${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR}/misc.pio)
 
 if(NOT DEFINED RUNFROMSRAM)
 

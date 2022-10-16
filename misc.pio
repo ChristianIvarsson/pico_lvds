@@ -1,0 +1,15 @@
+; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
+; Count pulses. Silly bonus thing
+.program count_pulse
+
+.wrap_target
+    out  x, 32        ; Wait for reception of count
+nextEdge:
+    jmp  pin nextEdge ; While pin high
+waitLow:
+    jmp pin nxtPls    ; Leave loop when pin goes high
+    jmp waitLow
+nxtPls:
+    jmp  x-- nextEdge
+    in   x, 32        ; Push something as to indicate "done"
+.wrap
