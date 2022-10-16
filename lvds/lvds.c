@@ -32,15 +32,16 @@
 
 #define FILL_COLR  (0xf8) // Only the pinkest pink will do
 
-// Decide what to do..
 uint32_t visLine    [ VISLINEBUFFERS ] [ FULL_LINE ];
 uint32_t vBlankLine [ FULL_LINE ];
 
 uint8_t  screenBuf  [ yRES / 2 ] [ xRES / 2 ] __attribute__((aligned(4)));
 
 static uintptr_t nextLinePtr = (uintptr_t)vBlankLine;
-
 static lvdsData_t lvDat;
+
+static int32_t rqLutchg = -1;
+static uint32_t *newLut;
 
 void genLineData(void)
 {
@@ -62,10 +63,7 @@ void genLineData(void)
     }
 }
 
-static int32_t rqLutchg = -1;
-static uint32_t *newLut;
-
-void reqLutChange(const uint32_t *lut, uint16_t line)
+void reqLutChange(uint32_t *lut, uint16_t line)
 {
     if (lut) {
         newLut = lut;
@@ -93,7 +91,7 @@ static void __isr __not_in_flash_func(lvdsDMATrigger)(void)
             drawLineASM2x(screenBuf[lvDat.line/2], visLine[idx], (xRES/2));
             lvDat.line++;
             sio_hw->fifo_wr = (uint32_t)&lvDat;
-            __asm volatile ("sev");
+            asm volatile ("sev");
             lvDat.rtime = (ticks - systick_hw->cvr)&0xffffff;
         } else {
             lvDat.line++;
@@ -108,7 +106,7 @@ static void __isr __not_in_flash_func(lvdsDMATrigger)(void)
             drawLineASM2x(screenBuf[0], visLine[0], (xRES/2));
             lvDat.line = 1;
             sio_hw->fifo_wr = (uint32_t)&lvDat;
-            __asm volatile ("sev");
+            asm volatile ("sev");
             lvDat.rtime = (ticks - systick_hw->cvr)&0xffffff;
         }
     }
@@ -236,16 +234,13 @@ static void pio_init(void)
     pio_sm_set_clkdiv_int_frac(LVDS_PIO, LVDS_CK_SM, PIODIV, 0);
 }
 
-static void dvi_configure_pad(uint gpio) {
-	// 2 mA drive, enable slew rate limiting (this seems fine even at 720p30, and
-	// the 3V3 LDO doesn't get warm like when turning all the GPIOs up to 11).
-	// Also disable digital receiver.
+static void configure_pad(uint gpio)
+{
 	hw_write_masked(
 		&padsbank0_hw->io[gpio],
 		(0 << PADS_BANK0_GPIO0_DRIVE_LSB),
 		PADS_BANK0_GPIO0_DRIVE_BITS | PADS_BANK0_GPIO0_SLEWFAST_BITS | PADS_BANK0_GPIO0_IE_BITS
 	);
-	// gpio_set_outover(gpio, invert ? GPIO_OVERRIDE_INVERT : GPIO_OVERRIDE_NORMAL);
 }
 
 void lvds_loop(void)
@@ -253,16 +248,15 @@ void lvds_loop(void)
     // Set systick to processor clock
     systick_hw->csr = 0x5;
 
-
-
-
-
     pio_init();
 
-    for (uint32_t i = 0; i < 10; i++)
-    {
-        dvi_configure_pad(i+8);
+    for (uint32_t i = 0; i < 8; i++) {
+        configure_pad(PINBASE_DAT_LO + i);
+        configure_pad(PINBASE_DAT_HI + i);
     }
+
+    for (uint32_t i = 0; i < 2; i++)
+        configure_pad(PINBASE_CLK + i);
 
     dma_init();
 

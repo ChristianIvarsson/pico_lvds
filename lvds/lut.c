@@ -24,7 +24,7 @@
 
 // 2k
 uint32_t pixLUT[256];
-uint32_t *currentLUT = &pixLUT;
+uint32_t *currentLUT = pixLUT;
 
 // from dosbox project
 const uint8_t defaultPalette[256 * 3] = {
