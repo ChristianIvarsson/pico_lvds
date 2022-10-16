@@ -19,12 +19,11 @@
 # 7168 cycles / visible line  (7.0  cycles / pixel)   (28.0000 ticks for 4)  (28.444.. microsec)
 # 8400 cycles / total line    (8.2~ cycles / pixel)   (32.8125 ticks for 4)  (33.333.. microsec)
 
-# 8 ticks / panel pixel
+# 7 ticks / panel pixel
 .macro drawPixel    srcOffset    srcReg  dstReg  lutReg    scrtch1  scrtch2
     ldrb    \scrtch1 , [ \srcReg, #\srcOffset ]  /* (1 + 1) Load pixel                                */
     lsls    \scrtch1 , \scrtch1, #2              /* (  1  ) Times 4 since it's to be used as an index */
-    add     \scrtch1 , \scrtch1, \lutReg         /* (  1  ) Calculate offset in LUT                   */
-    ldmia   \scrtch1!, { \scrtch2 }              /* (1 + 1) Load data.    ___REG IS TRASHED!___       */
+    ldr     \scrtch2 , [ \lutReg, \scrtch1 ]     /* (1 + 1) Load data.                                */
     stmia   \dstReg! , { \scrtch2 }              /* (1 + 1) Store data                                */
 .endm
 
@@ -41,10 +40,10 @@ func_t  drawLineASM
 
 morePixels:
 
-    drawPixel   0x00,   r0, r1, r3,   r4, r5   /* (8) */
-    drawPixel   0x01,   r0, r1, r3,   r4, r5   /* (8) */
-    drawPixel   0x02,   r0, r1, r3,   r4, r5   /* (8) */
-    drawPixel   0x03,   r0, r1, r3,   r4, r5   /* (8) */
+    drawPixel   0x00,   r0, r1, r3,   r4, r5   /* (7) */
+    drawPixel   0x01,   r0, r1, r3,   r4, r5   /* (7) */
+    drawPixel   0x02,   r0, r1, r3,   r4, r5   /* (7) */
+    drawPixel   0x03,   r0, r1, r3,   r4, r5   /* (7) */
 
     adds    r0,  #4     /* (1) Next four pixels      */
     subs    r2,  #4     /* (1) Decrement pixels left */
@@ -56,12 +55,11 @@ bx lr                   /* (3)                       */
 
 
 
-# 10 ticks / 2 panel pixels
+# 9 ticks / 2 panel pixels
 .macro drawDoublePixel    srcOffset    srcReg  dstReg  lutReg    scrtch1  scrtch2
     ldrb    \scrtch1 , [ \srcReg, #\srcOffset ]  /* (1 + 1) Load pixel                                */
     lsls    \scrtch1 , \scrtch1, #2              /* (  1  ) Times 4 since it's to be used as an index */
-    add     \scrtch1 , \scrtch1, \lutReg         /* (  1  ) Calculate offset in LUT                   */
-    ldmia   \scrtch1!, { \scrtch2 }              /* (1 + 1) Load data.    ___REG IS TRASHED!___       */
+    ldr     \scrtch2 , [ \lutReg, \scrtch1 ]     /* (1 + 1) Load data.                                */
     stmia   \dstReg! , { \scrtch2 }              /* (1 + 1) Store data                                */
     stmia   \dstReg! , { \scrtch2 }              /* (1 + 1) Store data                                */
 .endm
@@ -79,14 +77,14 @@ func_t  drawLineASM2x
 
 morePixels2x:
 
-    drawDoublePixel   0x00,   r0, r1, r3,   r4, r5   /* (10) */
-    drawDoublePixel   0x01,   r0, r1, r3,   r4, r5   /* (10) */
-    drawDoublePixel   0x02,   r0, r1, r3,   r4, r5   /* (10) */
-    drawDoublePixel   0x03,   r0, r1, r3,   r4, r5   /* (10) */
-    drawDoublePixel   0x04,   r0, r1, r3,   r4, r5   /* (10) */
-    drawDoublePixel   0x05,   r0, r1, r3,   r4, r5   /* (10) */
-    drawDoublePixel   0x06,   r0, r1, r3,   r4, r5   /* (10) */
-    drawDoublePixel   0x07,   r0, r1, r3,   r4, r5   /* (10) */
+    drawDoublePixel   0x00,   r0, r1, r3,   r4, r5   /* (9) */
+    drawDoublePixel   0x01,   r0, r1, r3,   r4, r5   /* (9) */
+    drawDoublePixel   0x02,   r0, r1, r3,   r4, r5   /* (9) */
+    drawDoublePixel   0x03,   r0, r1, r3,   r4, r5   /* (9) */
+    drawDoublePixel   0x04,   r0, r1, r3,   r4, r5   /* (9) */
+    drawDoublePixel   0x05,   r0, r1, r3,   r4, r5   /* (9) */
+    drawDoublePixel   0x06,   r0, r1, r3,   r4, r5   /* (9) */
+    drawDoublePixel   0x07,   r0, r1, r3,   r4, r5   /* (9) */
 
     adds    r0,  #8     /* (1) Next eight pixels     */
     subs    r2,  #8     /* (1) Decrement pixels left */
