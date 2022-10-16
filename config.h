@@ -33,8 +33,8 @@ extern "C" {
 #define LVDS_HI_DMA_CHAN    (2)
 #define LVDS_HI_DMA_CB_CHAN (3)
 
-
-#define COUNTER_SM (3)    // Pulse counter. no more, no less
+#define COUNTER_PIO (pio1)
+#define COUNTER_SM  (3)    // Pulse counter. no more, no less
 
 #ifdef __cplusplus 
 }

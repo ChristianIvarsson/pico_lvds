@@ -16,7 +16,7 @@
 static uint32_t cntrOffs = 0;
 void pio_init_counter(void)
 {
-    cntrOffs = pio_add_program(LVDS_PIO, &count_pulse_program);
+    cntrOffs = pio_add_program(COUNTER_PIO, &count_pulse_program);
     pio_sm_config c = count_pulse_program_get_default_config(cntrOffs);
 
     sm_config_set_in_shift(&c,
@@ -28,31 +28,31 @@ void pio_init_counter(void)
                             true,  // autopull
                             32);
 
-    pio_sm_init(LVDS_PIO, COUNTER_SM, cntrOffs, &c);
-    pio_sm_set_clkdiv_int_frac(LVDS_PIO, COUNTER_SM, 1, 0);
-    pio_sm_set_enabled(LVDS_PIO, COUNTER_SM, true);
+    pio_sm_init(COUNTER_PIO, COUNTER_SM, cntrOffs, &c);
+    pio_sm_set_clkdiv_int_frac(COUNTER_PIO, COUNTER_SM, 1, 0);
+    pio_sm_set_enabled(COUNTER_PIO, COUNTER_SM, true);
 }
 
 double __time_critical_func (countTicks)(const uint32_t pin, const uint32_t count)
 {
     if (count == 0) return 0.1;
-    pio_sm_set_enabled(LVDS_PIO, COUNTER_SM, false);
-    pio_sm_clear_fifos(LVDS_PIO, COUNTER_SM);
-    pio_sm_exec(LVDS_PIO, COUNTER_SM, pio_encode_jmp(cntrOffs));
-    pio_sm_set_enabled(LVDS_PIO, COUNTER_SM, true);
+    pio_sm_set_enabled(COUNTER_PIO, COUNTER_SM, false);
+    pio_sm_clear_fifos(COUNTER_PIO, COUNTER_SM);
+    pio_sm_exec(COUNTER_PIO, COUNTER_SM, pio_encode_jmp(cntrOffs));
+    pio_sm_set_enabled(COUNTER_PIO, COUNTER_SM, true);
 
-    LVDS_PIO->sm[COUNTER_SM].execctrl =
-        (LVDS_PIO->sm[COUNTER_SM].execctrl & ~PIO_SM0_EXECCTRL_JMP_PIN_BITS) |
+    COUNTER_PIO->sm[COUNTER_SM].execctrl =
+        (COUNTER_PIO->sm[COUNTER_SM].execctrl & ~PIO_SM0_EXECCTRL_JMP_PIN_BITS) |
         (pin << PIO_SM0_EXECCTRL_JMP_PIN_LSB);
 
-    LVDS_PIO->txf[COUNTER_SM] = count - 1;
+    COUNTER_PIO->txf[COUNTER_SM] = count - 1;
 
     // Capture current processor tick and time in micros.
     volatile uint32_t cTime = systick_hw->cvr;
     volatile uint32_t uTime = time_us_32();
 
     // Wait for state machine to push
-    while (pio_sm_is_rx_fifo_empty(LVDS_PIO, COUNTER_SM))  ;
+    while (pio_sm_is_rx_fifo_empty(COUNTER_PIO, COUNTER_SM))  ;
 
     // Capture delta since
     cTime = (cTime - systick_hw->cvr) & 0xffffff;
