@@ -19,6 +19,7 @@ extern void drawLine(const uint8_t *src, uint32_t *dst, uint32_t srcCount);
 extern void drawLineASM(const uint8_t *src, uint32_t *dst, uint32_t srcCount);
 // Count must be in multiples of 8!
 extern void drawLineASM2x(const uint8_t *src, uint32_t *dst, uint32_t srcCount);
+extern void draw565LineASM2x(const uint16_t *src, uint32_t *dst, uint32_t srcCount);
 
 #ifdef __cplusplus 
 }
