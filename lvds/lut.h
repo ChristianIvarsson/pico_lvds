@@ -12,6 +12,7 @@ extern const uint8_t rgb332Palette[256 * 3];
 
 extern void genPalette_3x8(const uint8_t *p, uint32_t *lut);
 extern void genPalette_32(const uint32_t *p, uint32_t *lut);
+extern void gen565lut(void);
 extern void drawLine(const uint8_t *src, uint32_t *dst, uint32_t srcCount);
 
 // lut_low.S

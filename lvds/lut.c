@@ -22,6 +22,16 @@
 //    7      6      5      4      3      2     1       0
 // < g4 > < r3 > < g5 > < r4 > < b0 > < r5 > < b1 > < g0 >
 
+// RGB format
+#define extR565(val)   (((((val) >> 11) & 31) * ((1<<(DEPTH_R))-1)) / 31)
+#define extG565(val)   (((((val) >>  5) & 63) * ((1<<(DEPTH_G))-1)) / 63)
+#define extB565(val)   (((((val) >>  0) & 31) * ((1<<(DEPTH_B))-1)) / 31)
+
+// BGR format
+// #define extR565(val)   (((((val) >>  0) & 31) * ((1<<(DEPTH_R))-1)) / 31)
+// #define extG565(val)   (((((val) >>  5) & 63) * ((1<<(DEPTH_G))-1)) / 63)
+// #define extB565(val)   (((((val) >> 11) & 31) * ((1<<(DEPTH_B))-1)) / 31)
+
 // 2k
 uint32_t pixLUT[256];
 uint32_t lut565_even[256];
@@ -135,5 +145,20 @@ void __not_in_flash_func(drawLine)(const uint8_t *src, uint32_t *dst, uint32_t s
     {
         dst[(i * 2) + 0] = lutPtr[(src[i] * 2) + 0];
         dst[(i * 2) + 1] = lutPtr[(src[i] * 2) + 1];
+    }
+}
+
+void gen565lut(void)
+{
+    for (uint32_t i = 0; i < 256; i++)
+    {
+        uint8_t r = extR565(i);
+        uint8_t g = extG565(i);
+        uint8_t b = extB565(i);
+        lut565_even[i] = LVDS_PIX(r, g, b, 1, 0, 0);
+        r = extR565((i<<8));
+        g = extG565((i<<8));
+        b = extB565((i<<8));
+        lut565_odd[i] = LVDS_PIX(r, g, b, 1, 0, 0);
     }
 }
