@@ -24,6 +24,9 @@
 
 // 2k
 uint32_t pixLUT[256];
+uint32_t lut565_even[256];
+uint32_t lut565_odd[256];
+
 uint32_t *currentLUT = pixLUT;
 
 // from dosbox project

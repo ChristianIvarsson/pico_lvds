@@ -36,6 +36,11 @@ extern "C" {
 #define COUNTER_PIO (pio1)
 #define COUNTER_SM  (3)    // Pulse counter. no more, no less
 
+// Panel depth. Colours / pixel
+#define DEPTH_R  (6)
+#define DEPTH_G  (6)
+#define DEPTH_B  (6)
+
 #ifdef __cplusplus 
 }
 #endif
